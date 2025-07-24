@@ -1,0 +1,41 @@
+{
+  "script": {
+    "lang": "painless",
+    "source": """
+      // Step 1: Parse rolesCommaSeparated to array
+      if (ctx.event?.payloadData?.rolesCommaSeparated != null) {
+        String[] rawRoles = ctx.event.payloadData.rolesCommaSeparated.split(",");
+        List rolesArray = new ArrayList();
+        for (int i = 0; i < rawRoles.length; i++) {
+          String role = rawRoles[i].trim();
+          if (!role.isEmpty() && !rolesArray.contains(role)) {
+            rolesArray.add(role);
+          }
+        }
+        if (rolesArray.size() > 0) {
+          ctx.event.payloadData.rolesCommaSeparated = rolesArray;
+        }
+      }
+
+      // Step 2: Create event_type_filter array
+      List eventArray = new ArrayList();
+      def eventType = ctx.event?.payloadData?.eventType;
+      def idpType = ctx.event?.payloadData?.identityProviderType;
+      def authStepSuccess = ctx.event?.payloadData?.authStepSuccess;
+
+      if ("overall".equals(eventType) || authStepSuccess == false) {
+        eventArray.add("Overall");
+      }
+      if ("step".equals(eventType)) {
+        if ("Resident".equals(idpType)) {
+          eventArray.add("Resident");
+        }
+        if ("FEDERATED".equals(idpType)) {
+          eventArray.add("Federated");
+        }
+      }
+
+      ctx.event.payloadData.event_type_filter = eventArray;
+    """
+  }
+}
